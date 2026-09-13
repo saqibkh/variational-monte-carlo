@@ -12,8 +12,8 @@ namespace {
 #if defined(XPU_CUDA)
 __global__
 void cudaDerivativeSums(
-  xpu::soa_view<fp_t, idx(Derivatives::NUM)> log_derivatives,
-  xpu::soa_view<fp_t, idx(Derivatives::NUM)> jastrow_derivatives
+  derivatives_view log_derivatives,
+  derivatives_view jastrow_derivatives
 ) {
   const auto [i]{xpu::global_index<1>()};
   if (i >= log_derivatives.stride()) { return; }
@@ -25,8 +25,8 @@ void cudaDerivativeSums(
 } // namespace
 
 inline void derivative_sums(
-  xpu::soa_view<fp_t, idx(Derivatives::NUM)> log_derivatives,
-  xpu::soa_view<fp_t, idx(Derivatives::NUM)> jastrow_derivatives
+  derivatives_view log_derivatives,
+  derivatives_view jastrow_derivatives
 ) {
 #if defined(XPU_CUDA)
   dim3 derivativeSumsThreads{256};

@@ -66,7 +66,7 @@ public:
     std::size_t trig_row_stride{};
     std::size_t matrix_row_stride{};
 
-    xpu::soa_view<fp_t, idx(Axis::NUM)> k_vector{nullptr, 0uz};
+    vec3_view_t k_vector{nullptr, 0uz};
     const std::size_t* orbital_k_index{};
     const std::uint8_t* orbital_type{};
 
@@ -90,7 +90,7 @@ public:
     std::size_t trig_row_stride{};
     std::size_t matrix_row_stride{};
 
-    xpu::soa_view<fp_t, idx(Axis::NUM)> k_vector{nullptr, 0uz};
+    vec3_view_t k_vector{nullptr, 0uz};
     const std::size_t* orbital_k_index{};
     const std::uint8_t* orbital_type{};
 
@@ -198,12 +198,12 @@ public:
   }
 
   [[nodiscard]]
-  xpu::soa_view<fp_t, idx(Axis::NUM)> k_vector() {
+  vec3_view_t k_vector() {
     return k_vectors_.view<idx(Axis::NUM), K_X>();
   }
 
   [[nodiscard]]
-  xpu::soa_view<const fp_t, idx(Axis::NUM)> k_vector() const {
+  const_vec3_view_t k_vector() const {
     return k_vectors_.view<idx(Axis::NUM), K_X>();
   }
 

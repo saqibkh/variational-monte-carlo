@@ -19,15 +19,15 @@ class Simulation {
 public:
   struct RandomProposal {
     std::size_t particle;
-    xpu::array<fp_t, idx(Axis::NUM)> displacement;
+    vec3_t displacement;
     fp_t acceptance;
   };
 
   struct StepResult {
     bool accepted;
     std::size_t moved_particle;
-    xpu::array<fp_t, idx(Axis::NUM)> old_pos;
-    xpu::array<fp_t, idx(Axis::NUM)> new_pos;
+    vec3_t old_pos;
+    vec3_t new_pos;
     fp_t log_psi_delta;
     fp_t real_energy_delta;
     fp_t reciprocal_energy;

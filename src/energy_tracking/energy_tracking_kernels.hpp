@@ -14,7 +14,7 @@ namespace energy {
 namespace {
 
 struct KineticEnergyContribution {
-  xpu::soa_view<fp_t, idx(Derivatives::NUM)> derivatives{
+  derivatives_view derivatives{
     nullptr, 0uz
   };
 
@@ -32,14 +32,14 @@ __global__
 void cudaUpdateRealEnergy(
   std::size_t moved,
   fp_t L, fp_t half_L, fp_t alpha,
-  xpu::array<fp_t, idx(Axis::NUM)> old_pos,
-  xpu::soa_view<fp_t, idx(Axis::NUM)> pos,
+  vec3_t old_pos,
+  vec3_view_t pos,
   fp_t* RESTRICT delta
 ) {
   const auto [i]{xpu::global_index<1>()};
   if (i >= pos.count()) { return; }
 
-  xpu::array<fp_t, idx(Axis::NUM)> new_pos{
+  vec3_t new_pos{
     pos[idx(Axis::X)][moved],
     pos[idx(Axis::Y)][moved],
     pos[idx(Axis::Z)][moved]
@@ -55,9 +55,9 @@ void cudaUpdateRealEnergy(
 
 __global__
 void cudaUpdateStructureFactors(
-  xpu::array<fp_t, idx(Axis::NUM)> old_pos,
-  xpu::array<fp_t, idx(Axis::NUM)> new_pos,
-  xpu::soa_view<fp_t, idx(Axis::NUM)> g_vector,
+  vec3_t old_pos,
+  vec3_t new_pos,
+  vec3_view_t g_vector,
   fp_t* RESTRICT sum_real,
   fp_t* RESTRICT sum_imag
 ) {
@@ -78,8 +78,8 @@ void cudaUpdateStructureFactors(
 inline fp_t update_real_energy(
   std::size_t moved,
   fp_t L, fp_t half_L, fp_t alpha,
-  xpu::array<fp_t, idx(Axis::NUM)> old_pos,
-  xpu::soa_view<fp_t, idx(Axis::NUM)> pos,
+  vec3_t old_pos,
+  vec3_view_t pos,
   fp_t* RESTRICT delta_scratch
 ) noexcept {
 #if defined(XPU_CUDA)
@@ -106,7 +106,7 @@ inline fp_t update_real_energy(
 #else
   scast<void>(delta_scratch);
 
-  xpu::array<fp_t, idx(Axis::NUM)> new_pos{
+  vec3_t new_pos{
     pos[idx(Axis::X)][moved],
     pos[idx(Axis::Y)][moved],
     pos[idx(Axis::Z)][moved]
@@ -137,14 +137,14 @@ inline std::size_t kinetic_energy_scratch_bytes(
     {1uz}
   };
   const KineticEnergyContribution contribution{
-    xpu::soa_view<fp_t, idx(Derivatives::NUM)>{nullptr, num_particles}
+    derivatives_view{nullptr, num_particles}
   };
 
   return xpu::parallel_reduce_sum_bytes<fp_t>(range, contribution);
 }
 
 inline fp_t kinetic_energy(
-  xpu::soa_view<fp_t, idx(Derivatives::NUM)> derivatives,
+  derivatives_view derivatives,
   fp_t* RESTRICT kinetic_sum_scratch,
   void* scratch,
   std::size_t scratch_bytes
@@ -170,9 +170,9 @@ inline fp_t kinetic_energy(
 }
 
 inline void update_structure_factors(
-  xpu::array<fp_t, idx(Axis::NUM)> old_pos,
-  xpu::array<fp_t, idx(Axis::NUM)> new_pos,
-  xpu::soa_view<fp_t, idx(Axis::NUM)> g_vector,
+  vec3_t old_pos,
+  vec3_t new_pos,
+  vec3_view_t g_vector,
   fp_t* RESTRICT sum_real,
   fp_t* RESTRICT sum_imag
 ) noexcept {
@@ -208,7 +208,7 @@ inline void update_structure_factors(
 inline fp_t update_real_energy(
   EnergyTracker::View energy,
   std::size_t moved,
-  xpu::array<fp_t, idx(Axis::NUM)> old_pos,
+  vec3_t old_pos,
   Particles::View particles
 ) noexcept {
   return update_real_energy(
@@ -238,8 +238,8 @@ inline fp_t kinetic_energy(
 
 inline void update_structure_factors(
   EnergyTracker::View energy,
-  xpu::array<fp_t, idx(Axis::NUM)> old_pos,
-  xpu::array<fp_t, idx(Axis::NUM)> new_pos
+  vec3_t old_pos,
+  vec3_t new_pos
 ) noexcept {
   update_structure_factors(
     old_pos,

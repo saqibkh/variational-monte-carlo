@@ -51,7 +51,7 @@ public:
     fp_t ewald_alpha{};
     fp_t ewald_correction{};
     fp_t ewald_background{};
-    xpu::soa_view<fp_t, idx(Axis::NUM)> g_vector{nullptr, 0uz};
+    vec3_view_t g_vector{nullptr, 0uz};
     const fp_t* g_weights{};
     fp_t* sum_real{};
     fp_t* sum_imag{};
@@ -67,7 +67,7 @@ public:
     fp_t ewald_correction{};
     fp_t ewald_background{};
 
-    xpu::soa_view<fp_t, idx(Axis::NUM)> g_vector{nullptr, 0uz};
+    vec3_view_t g_vector{nullptr, 0uz};
     const fp_t* g_weights{};
 
     xpu::soa_batch_view<fp_t, idx(WalkerArray::NUM_ARRAYS)> walker_data{
@@ -197,14 +197,14 @@ public:
   ) noexcept;
 
   void update_structure_factors(
-    xpu::array<fp_t, idx(Axis::NUM)> old_pos,
-    xpu::array<fp_t, idx(Axis::NUM)> new_pos,
+    vec3_t old_pos,
+    vec3_t new_pos,
     std::size_t walker = 0uz
   ) noexcept;
 
   void update_real_energy(
     std::size_t moved,
-    xpu::array<fp_t, idx(Axis::NUM)> old_pos,
+    vec3_t old_pos,
     Particles::View particles,
     std::size_t walker = 0uz
   ) noexcept;
@@ -245,12 +245,12 @@ public:
 
 private:
   [[nodiscard]]
-  xpu::soa_view<fp_t, idx(Axis::NUM)> g_vector() {
+  vec3_view_t g_vector() {
     return shared_data_.view<idx(Axis::NUM), idx(SharedArray::G_X)>();
   }
 
   [[nodiscard]]
-  xpu::soa_view<const fp_t, idx(Axis::NUM)> g_vector() const {
+  const_vec3_view_t g_vector() const {
     return shared_data_.view<idx(Axis::NUM), idx(SharedArray::G_X)>();
   }
 

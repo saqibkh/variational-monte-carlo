@@ -168,7 +168,7 @@ inline void add_derivatives(
 CUDA_CALLABLE
 inline void accumulate_derivatives(
   std::size_t i,
-  xpu::soa_view<fp_t, idx(Derivatives::NUM)> derivatives
+  derivatives_view derivatives
 ) {
   const auto gradient_x{derivatives[idx(Derivatives::GRAD_X)][i]};
   const auto gradient_y{derivatives[idx(Derivatives::GRAD_Y)][i]};

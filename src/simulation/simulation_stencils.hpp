@@ -57,7 +57,7 @@ inline Simulation::RandomProposal generate_random_proposal(
 ) noexcept {
   const auto particle{generator.uniform_index(num_particles)};
 
-  xpu::array<fp_t, idx(Axis::NUM)> displacement{};
+  vec3_t displacement{};
   if (step_size > 0.0_fp) {
     for (auto axis{idx(Axis::X)}; axis < idx(Axis::NUM); ++axis) {
       displacement[axis] = generator.uniform(-step_size, step_size);

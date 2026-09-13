@@ -19,15 +19,15 @@ private:
 public:
   struct View {
     std::size_t count{};
-    xpu::soa_view<fp_t, idx(Axis::NUM)> pos{nullptr, 0uz};
-    xpu::soa_view<fp_t, idx(Derivatives::NUM)> derivatives{nullptr, 0uz};
+    vec3_view_t pos{nullptr, 0uz};
+    derivatives_view derivatives{nullptr, 0uz};
   };
 
   struct BatchView {
-    xpu::soa_batch_view<fp_t, idx(Axis::NUM)> pos{
+    vec3_batch_view_t pos{
       nullptr, 0uz, 0uz, 0uz
     };
-    xpu::soa_batch_view<fp_t, idx(Derivatives::NUM)> derivatives{
+    derivatives_batch_view derivatives{
       nullptr, 0uz, 0uz, 0uz
     };
 
@@ -74,22 +74,22 @@ public:
   }
 
   [[nodiscard]]
-  xpu::soa_view<fp_t, idx(Axis::NUM)> pos(std::size_t walker = 0uz) {
+  vec3_view_t pos(std::size_t walker = 0uz) {
     return data_.view<idx(Axis::NUM), idx(ArrayIndex::POS)>(walker);
   }
   
   [[nodiscard]]
-  xpu::soa_view<const fp_t, idx(Axis::NUM)> pos(std::size_t walker = 0uz) const {
+  const_vec3_view_t pos(std::size_t walker = 0uz) const {
     return data_.view<idx(Axis::NUM), idx(ArrayIndex::POS)>(walker);
   }
 
   [[nodiscard]]
-  xpu::soa_view<fp_t, idx(Derivatives::NUM)> derivatives(std::size_t walker = 0uz) {
+  derivatives_view derivatives(std::size_t walker = 0uz) {
     return data_.view<idx(Derivatives::NUM), idx(ArrayIndex::DERIVATIVES)>(walker);
   }
   
   [[nodiscard]]
-  xpu::soa_view<const fp_t, idx(Derivatives::NUM)> derivatives(std::size_t walker = 0uz) const {
+  const_derivatives_view derivatives(std::size_t walker = 0uz) const {
     return data_.view<idx(Derivatives::NUM), idx(ArrayIndex::DERIVATIVES)>(walker);
   }
 

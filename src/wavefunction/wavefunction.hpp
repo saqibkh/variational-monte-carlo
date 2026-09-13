@@ -22,13 +22,13 @@ private:
     DERIVATIVES,
     NUM_ARRAYS = enum_index(ArrayIndex::DERIVATIVES, Derivatives::NUM)
   };
-  xpu::soa_batch<fp_t, idx(ArrayIndex::NUM_ARRAYS)> deriv_;
+  xpu::soa_batch<fp_t, idx(ArrayIndex::NUM_ARRAYS)> derivatives_;
 
 public:
   struct View {
     JastrowPade::View jastrow{};
     SlaterPlaneWave::View slater{};
-    xpu::soa_view<fp_t, idx(Derivatives::NUM)> jastrow_derivatives{nullptr, 0uz};
+    derivatives_view jastrow_derivatives{nullptr, 0uz};
     std::uint8_t* jastrow_cache_valid{};
     std::size_t* steps_since_refresh{};
   };
@@ -37,7 +37,7 @@ public:
     JastrowPade::View jastrow{};
     SlaterPlaneWave::BatchView slater{};
 
-    xpu::soa_batch_view<fp_t, idx(Derivatives::NUM)> jastrow_derivatives{
+    derivatives_batch_view jastrow_derivatives{
       nullptr, 0uz, 0uz, 0uz
     };
 
@@ -73,7 +73,7 @@ public:
     , slater_plane_wave_{particles, box_length}
     , jastrow_cache_valid_{particles.walker_count()}
     , steps_since_refresh_{particles.walker_count()}
-    , deriv_{particles.walker_count(), particles.count()}
+    , derivatives_{particles.walker_count(), particles.count()}
   {
     xpu::zero_n(jastrow_cache_valid_.data(), particles.walker_count());
     xpu::zero_n(steps_since_refresh_.data(), particles.walker_count());
@@ -86,13 +86,13 @@ public:
   [[nodiscard]] const SlaterPlaneWave& slater_plane_wave() const noexcept { return slater_plane_wave_; }
 
   [[nodiscard]]
-  xpu::soa_view<fp_t, idx(Derivatives::NUM)> j_derivatives(std::size_t walker = 0uz) {
-    return deriv_.view<idx(Derivatives::NUM), idx(ArrayIndex::DERIVATIVES)>(walker);
+  derivatives_view jastrow_derivatives(std::size_t walker = 0uz) {
+    return derivatives_.view<idx(Derivatives::NUM), idx(ArrayIndex::DERIVATIVES)>(walker);
   }
 
   [[nodiscard]]
-  xpu::soa_view<const fp_t, idx(Derivatives::NUM)> j_derivatives(std::size_t walker = 0uz) const {
-    return deriv_.view<idx(Derivatives::NUM), idx(ArrayIndex::DERIVATIVES)>(walker);
+  const_derivatives_view jastrow_derivatives(std::size_t walker = 0uz) const {
+    return derivatives_.view<idx(Derivatives::NUM), idx(ArrayIndex::DERIVATIVES)>(walker);
   }
 
   [[nodiscard]]
@@ -100,7 +100,7 @@ public:
     return {
       this->jastrow_pade().view(),
       this->slater_plane_wave().batch_view(),
-      deriv_.view<idx(Derivatives::NUM), idx(ArrayIndex::DERIVATIVES)>(),
+      derivatives_.view<idx(Derivatives::NUM), idx(ArrayIndex::DERIVATIVES)>(),
       jastrow_cache_valid_.data(),
       steps_since_refresh_.data()
     };
@@ -112,14 +112,14 @@ public:
   }
 
   [[nodiscard]] bool jastrow_cache_valid(std::size_t walker = 0uz) const noexcept {
-    assert(walker < deriv_.batch_count());
+    assert(walker < derivatives_.batch_count());
 
     auto value{std::uint8_t{}};
     xpu::copy_n(&value, jastrow_cache_valid_.data() + walker, 1uz);
     return value != 0u;
   }
   void set_jastrow_cache_valid(bool value, std::size_t walker = 0uz) noexcept {
-    assert(walker < deriv_.batch_count());
+    assert(walker < derivatives_.batch_count());
 
     xpu::fill_n(
       jastrow_cache_valid_.data() + walker,
@@ -129,14 +129,14 @@ public:
   }
 
   [[nodiscard]] std::size_t steps_since_refresh(std::size_t walker = 0uz) const noexcept {
-    assert(walker < deriv_.batch_count());
+    assert(walker < derivatives_.batch_count());
 
     auto value{0uz};
     xpu::copy_n(&value, steps_since_refresh_.data() + walker, 1uz);
     return value;
   }
   void set_steps_since_refresh(std::size_t value, std::size_t walker = 0uz) noexcept {
-    assert(walker < deriv_.batch_count());
+    assert(walker < derivatives_.batch_count());
 
     xpu::fill_n(steps_since_refresh_.data() + walker, 1uz, value);
   }
@@ -146,7 +146,7 @@ public:
     Particles::View particles,
     bool move_accepted,
     std::size_t moved,
-    xpu::array<fp_t, idx(Axis::NUM)> old_pos,
+    vec3_t old_pos,
     std::size_t walker = 0uz
   ) noexcept;
 

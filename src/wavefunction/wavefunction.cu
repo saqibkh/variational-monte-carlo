@@ -5,7 +5,7 @@
 namespace {
 
 void reset_derivatives(
-  xpu::soa_view<fp_t, idx(Derivatives::NUM)> derivative
+  derivatives_view derivative
 ) {
   const auto total_bytes{
     scast<std::size_t>(derivative.stride() * idx(Derivatives::NUM) * sizeof(fp_t))
@@ -17,10 +17,10 @@ void reset_derivatives(
 
 void WaveFunction::evaluate_derivatives(Particles::View particles, std::size_t walker) noexcept {
   reset_derivatives(particles.derivatives);
-  reset_derivatives(this->j_derivatives(walker));
+  reset_derivatives(this->jastrow_derivatives(walker));
 
   slater_plane_wave_.add_derivatives(particles, walker);
-  jastrow_pade_.add_derivatives(particles, this->j_derivatives(walker));
+  jastrow_pade_.add_derivatives(particles, this->jastrow_derivatives(walker));
 
   kernel::wavefunction::derivative_sums(this->view(walker), particles);
 
@@ -32,7 +32,7 @@ void WaveFunction::evaluate_derivatives(
   Particles::View particles,
   bool move_accepted,
   std::size_t moved,
-  xpu::array<fp_t, idx(Axis::NUM)> old_pos,
+  vec3_t old_pos,
   std::size_t walker
 ) noexcept {
   if (!jastrow_cache_valid(walker)) {
@@ -52,7 +52,7 @@ void WaveFunction::evaluate_derivatives(
     moved,
     old_pos,
     particles,
-    this->j_derivatives(walker)
+    this->jastrow_derivatives(walker)
   );
 
   reset_derivatives(particles.derivatives);

@@ -113,7 +113,7 @@ TEST_CASE("Energy reinitialization and incremental moves agree with reconstructi
         require_near(actual, expected, tolerance);
 
         constexpr auto moved{0uz};
-        xpu::array<fp_t, idx(Axis::NUM)> old_pos{};
+        vec3_t old_pos{};
         for (auto axis{0uz}; axis < idx(Axis::NUM); ++axis) {
           xpu::copy_n(&old_pos[axis], particles.pos(walker)[axis] + moved, 1uz);
         }

@@ -89,8 +89,8 @@ __global__
 void cudaUpdateTrigRow(
   std::size_t num_unique_k,
   std::size_t offset, std::size_t particle,
-  xpu::soa_view<fp_t, idx(Axis::NUM)> particle_pos,
-  xpu::soa_view<fp_t, idx(Axis::NUM)> k_vector,
+  vec3_view_t particle_pos,
+  vec3_view_t k_vector,
   fp_t* RESTRICT sin_cache, fp_t* RESTRICT cos_cache
 ) {
   const auto [i]{xpu::global_index<1>()};
@@ -107,8 +107,8 @@ __global__
 void cudaBuildTrigCache(
   std::size_t num_unique_k,
   std::size_t trig_row_stride,
-  xpu::soa_view<fp_t, idx(Axis::NUM)> particle_pos,
-  xpu::soa_view<fp_t, idx(Axis::NUM)> k_vector,
+  vec3_view_t particle_pos,
+  vec3_view_t k_vector,
   fp_t* RESTRICT sin_cache,
   fp_t* RESTRICT cos_cache
 ) {
@@ -178,7 +178,7 @@ void cudaAddDerivatives(
 
 __global__
 void cudaAccumulateDerivatives(
-  xpu::soa_view<fp_t, idx(Derivatives::NUM)> derivatives
+  derivatives_view derivatives
 ) {
   const auto [i]{xpu::global_index<1>()};
   if (i >= derivatives.count()) { return; }
@@ -294,8 +294,8 @@ inline void initialize_matrices(
 inline void update_trig_cache(
   std::size_t num_unique_k,
   std::size_t offset, std::size_t particle,
-  xpu::soa_view<fp_t, idx(Axis::NUM)> particle_pos,
-  xpu::soa_view<fp_t, idx(Axis::NUM)> k_vector,
+  vec3_view_t particle_pos,
+  vec3_view_t k_vector,
   fp_t* RESTRICT sin_cache, fp_t* RESTRICT cos_cache
 ) {
 #if defined(XPU_CUDA)
@@ -328,8 +328,8 @@ inline void update_trig_cache(
 inline void build_trig_cache(
   std::size_t num_unique_k,
   std::size_t trig_row_stride,
-  xpu::soa_view<fp_t, idx(Axis::NUM)> particle_pos,
-  xpu::soa_view<fp_t, idx(Axis::NUM)> k_vector,
+  vec3_view_t particle_pos,
+  vec3_view_t k_vector,
   fp_t* RESTRICT sin_cache,
   fp_t* RESTRICT cos_cache
 ) {

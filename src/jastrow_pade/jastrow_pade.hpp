@@ -41,19 +41,19 @@ public:
 
   void add_derivatives(
     Particles::View particles,
-    xpu::soa_view<fp_t, idx(Derivatives::NUM)> derivatives
+    derivatives_view derivatives
   ) const noexcept;
 
   [[nodiscard]] fp_t delta_value(
     std::size_t moved,
-    xpu::array<fp_t, idx(Axis::NUM)> old_pos,
+    vec3_t old_pos,
     Particles::View particles
   ) const noexcept;
 
   void update_derivatives_for_move(
     std::size_t moved,
-    xpu::array<fp_t, idx(Axis::NUM)> old_pos,
+    vec3_t old_pos,
     Particles::View particles,
-    xpu::soa_view<fp_t, idx(Derivatives::NUM)> derivatives
+    derivatives_view derivatives
   ) const noexcept;
 };

@@ -176,8 +176,8 @@ void EnergyTracker::initialize_structure_factors(
 }
 
 void EnergyTracker::update_structure_factors(
-  xpu::array<fp_t, idx(Axis::NUM)> old_pos,
-  xpu::array<fp_t, idx(Axis::NUM)> new_pos,
+  vec3_t old_pos,
+  vec3_t new_pos,
   std::size_t walker
 ) noexcept {
   kernel::energy::update_structure_factors(this->view(walker), old_pos, new_pos);
@@ -198,7 +198,7 @@ fp_t EnergyTracker::kinetic_energy(
 
 void EnergyTracker::update_real_energy(
   std::size_t moved,
-  xpu::array<fp_t, idx(Axis::NUM)> old_pos,
+  vec3_t old_pos,
   Particles::View particles,
   std::size_t walker
 ) noexcept {

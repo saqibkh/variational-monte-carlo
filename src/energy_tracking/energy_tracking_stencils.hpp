@@ -21,10 +21,10 @@ CUDA_CALLABLE
 inline fp_t evaluate_pair_energy(
   std::size_t other,
   fp_t L, fp_t half_L, fp_t alpha,
-  const xpu::array<fp_t, idx(Axis::NUM)>& particle_pos,
-  xpu::soa_view<fp_t, idx(Axis::NUM)> pos
+  const vec3_t& particle_pos,
+  vec3_view_t pos
 ) noexcept {
-  xpu::array<fp_t, idx(Axis::NUM)> displacement{};
+  vec3_t displacement{};
 
   for (auto axis{idx(Axis::X)}; axis < idx(Axis::NUM); ++axis) {
     auto delta{particle_pos[axis] - pos[axis][other]};
@@ -76,9 +76,9 @@ CUDA_CALLABLE
 inline void update_real_energy(
   std::size_t other, std::size_t moved,
   fp_t L, fp_t half_L, fp_t alpha,
-  const xpu::array<fp_t, idx(Axis::NUM)>& old_pos,
-  const xpu::array<fp_t, idx(Axis::NUM)>& new_pos,
-  xpu::soa_view<fp_t, idx(Axis::NUM)> pos,
+  const vec3_t& old_pos,
+  const vec3_t& new_pos,
+  vec3_view_t pos,
   fp_t* RESTRICT delta
 ) noexcept {
   if (other == moved) { return; }
@@ -108,7 +108,7 @@ inline void update_real_energy(
 CUDA_CALLABLE
 inline fp_t kinetic_energy_contribution(
   std::size_t i,
-  xpu::soa_view<fp_t, idx(Derivatives::NUM)> derivatives
+  derivatives_view derivatives
 ) noexcept {
   const auto gradient_x{derivatives[idx(Derivatives::GRAD_X)][i]};
   const auto gradient_y{derivatives[idx(Derivatives::GRAD_Y)][i]};
@@ -125,7 +125,7 @@ inline fp_t kinetic_energy_contribution(
 CUDA_CALLABLE
 inline void kinetic_energy(
   std::size_t i,
-  xpu::soa_view<fp_t, idx(Derivatives::NUM)> derivatives,
+  derivatives_view derivatives,
   fp_t* RESTRICT kinetic_sum
 ) noexcept {
   const auto contribution{kinetic_energy_contribution(i, derivatives)};
@@ -174,9 +174,9 @@ inline void evaluate_local_energy(
 CUDA_CALLABLE
 inline void update_structure_factors(
   std::size_t i,
-  const xpu::array<fp_t, idx(Axis::NUM)>& old_pos,
-  const xpu::array<fp_t, idx(Axis::NUM)>& new_pos,
-  xpu::soa_view<fp_t, idx(Axis::NUM)> g_vector,
+  const vec3_t& old_pos,
+  const vec3_t& new_pos,
+  vec3_view_t g_vector,
   fp_t* RESTRICT sum_real,
   fp_t* RESTRICT sum_imag
 ) noexcept {
@@ -222,8 +222,8 @@ CUDA_CALLABLE
 inline void update_structure_factors(
   std::size_t g_index,
   EnergyTracker::View energy,
-  const xpu::array<fp_t, idx(Axis::NUM)>& old_pos,
-  const xpu::array<fp_t, idx(Axis::NUM)>& new_pos
+  const vec3_t& old_pos,
+  const vec3_t& new_pos
 ) noexcept {
   update_structure_factors(
     g_index,
@@ -241,8 +241,8 @@ inline void update_real_energy(
   std::size_t moved,
   EnergyTracker::View energy,
   Particles::View particles,
-  const xpu::array<fp_t, idx(Axis::NUM)>& old_pos,
-  const xpu::array<fp_t, idx(Axis::NUM)>& new_pos,
+  const vec3_t& old_pos,
+  const vec3_t& new_pos,
   fp_t* delta
 ) noexcept {
   update_real_energy(
@@ -363,7 +363,7 @@ inline void initialize_real_partial(
     const auto second{element - first * particles.count};
     if (first >= second) { continue; }
 
-    const xpu::array<fp_t, idx(Axis::NUM)> particle_pos{
+    const vec3_t particle_pos{
       particles.pos[idx(Axis::X)][first],
       particles.pos[idx(Axis::Y)][first],
       particles.pos[idx(Axis::Z)][first]

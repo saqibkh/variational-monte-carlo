@@ -12,13 +12,13 @@ namespace {
 
 CUDA_CALLABLE
 inline fp_t evaluate_pair_value(
-  const xpu::array<fp_t, idx(Axis::NUM)>& particle_pos,
+  const vec3_t& particle_pos,
   std::size_t other,
   fp_t L, fp_t half_L,
   fp_t a, fp_t b,
-  xpu::soa_view<fp_t, idx(Axis::NUM)> pos
+  vec3_view_t pos
 ) noexcept {
-  xpu::array<fp_t, idx(Axis::NUM)> displacement{};
+  vec3_t displacement{};
 
   for (auto axis{idx(Axis::X)}; axis < idx(Axis::NUM); ++axis) {
     auto delta{particle_pos[axis] - pos[axis][other]};
@@ -60,26 +60,26 @@ inline void evaluate_derivative_factors(
     inverse_denominator * inverse_denominator
   };
 
-  const auto first_deriv{a * inverse_denominator_squared};
-  const auto second_deriv{
+  const auto first_derivative{a * inverse_denominator_squared};
+  const auto second_derivative{
     neg_two_ab * inverse_denominator_squared * inverse_denominator
   };
 
-  *gradient_factor = first_deriv * inverse_distance;
-  *laplacian_factor = second_deriv + 2.0_fp * first_deriv * inverse_distance;
+  *gradient_factor = first_derivative * inverse_distance;
+  *laplacian_factor = second_derivative + 2.0_fp * first_derivative * inverse_distance;
 }
 
 CUDA_CALLABLE
 inline void evaluate_pair_derivatives(
-  const xpu::array<fp_t, idx(Axis::NUM)>& particle_pos,
+  const vec3_t& particle_pos,
   std::size_t other,
   fp_t L, fp_t half_L,
   fp_t a, fp_t b, fp_t neg_two_ab,
-  xpu::soa_view<fp_t, idx(Axis::NUM)> pos,
-  xpu::array<fp_t, idx(Axis::NUM)>* gradient,
+  vec3_view_t pos,
+  vec3_t* gradient,
   fp_t* laplacian
 ) noexcept {
-  xpu::array<fp_t, idx(Axis::NUM)> displacement{};
+  vec3_t displacement{};
 
   for (auto axis{idx(Axis::X)}; axis < idx(Axis::NUM); ++axis) {
     auto delta{particle_pos[axis] - pos[axis][other]};
@@ -116,8 +116,8 @@ inline void value(
   std::size_t other,
   fp_t L, fp_t half_L,
   fp_t a, fp_t b,
-  const xpu::array<fp_t, idx(Axis::NUM)>& particle_pos,
-  xpu::soa_view<fp_t, idx(Axis::NUM)> pos,
+  const vec3_t& particle_pos,
+  vec3_view_t pos,
   fp_t* jastrow_value
 ) noexcept {
   const auto pair_value{
@@ -141,9 +141,9 @@ inline void delta_value(
   std::size_t moved,
   fp_t L, fp_t half_L,
   fp_t a, fp_t b,
-  const xpu::array<fp_t, idx(Axis::NUM)>& old_pos,
-  const xpu::array<fp_t, idx(Axis::NUM)>& new_pos,
-  xpu::soa_view<fp_t, idx(Axis::NUM)> pos,
+  const vec3_t& old_pos,
+  const vec3_t& new_pos,
+  vec3_view_t pos,
   fp_t* delta
 ) noexcept {
   if (other == moved) { return; }
@@ -176,16 +176,16 @@ inline void compute_derivatives(
   std::size_t moved,
   fp_t L, fp_t half_L,
   fp_t a, fp_t b, fp_t neg_two_ab,
-  const xpu::array<fp_t, idx(Axis::NUM)>& old_pos,
-  const xpu::array<fp_t, idx(Axis::NUM)>& new_pos,
-  xpu::soa_view<fp_t, idx(Axis::NUM)> pos,
-  xpu::soa_view<fp_t, idx(Derivatives::NUM)> derivatives,
-  fp_t* moved_gx, fp_t* moved_gy, fp_t* moved_gz,fp_t* moved_lap
+  const vec3_t& old_pos,
+  const vec3_t& new_pos,
+  vec3_view_t pos,
+  derivatives_view derivatives,
+  fp_t* moved_gradient_x, fp_t* moved_gradient_y, fp_t* moved_gradient_z,fp_t* moved_laplacian
 ) noexcept {
   if (i == moved) { return; }
 
-  xpu::array<fp_t, idx(Axis::NUM)> gradient_old{};
-  xpu::array<fp_t, idx(Axis::NUM)> gradient_new{};
+  vec3_t gradient_old{};
+  vec3_t gradient_new{};
 
   auto laplacian_old{0.0_fp};
   auto laplacian_new{0.0_fp};
@@ -207,15 +207,15 @@ inline void compute_derivatives(
   derivatives[idx(Derivatives::LAP)][i] += laplacian_new - laplacian_old;
 
 #if defined(__CUDA_ARCH__)
-  atomicAdd(moved_gx, gradient_new[idx(Axis::X)] - gradient_old[idx(Axis::X)]);
-  atomicAdd(moved_gy, gradient_new[idx(Axis::Y)] - gradient_old[idx(Axis::Y)]);
-  atomicAdd(moved_gz, gradient_new[idx(Axis::Z)] - gradient_old[idx(Axis::Z)]);
-  atomicAdd(moved_lap, laplacian_new - laplacian_old);
+  atomicAdd(moved_gradient_x, gradient_new[idx(Axis::X)] - gradient_old[idx(Axis::X)]);
+  atomicAdd(moved_gradient_y, gradient_new[idx(Axis::Y)] - gradient_old[idx(Axis::Y)]);
+  atomicAdd(moved_gradient_z, gradient_new[idx(Axis::Z)] - gradient_old[idx(Axis::Z)]);
+  atomicAdd(moved_laplacian, laplacian_new - laplacian_old);
 #else
-  *moved_gx += gradient_new[idx(Axis::X)] - gradient_old[idx(Axis::X)];
-  *moved_gy += gradient_new[idx(Axis::Y)] - gradient_old[idx(Axis::Y)];
-  *moved_gz += gradient_new[idx(Axis::Z)] - gradient_old[idx(Axis::Z)];
-  *moved_lap += laplacian_new - laplacian_old;
+  *moved_gradient_x += gradient_new[idx(Axis::X)] - gradient_old[idx(Axis::X)];
+  *moved_gradient_y += gradient_new[idx(Axis::Y)] - gradient_old[idx(Axis::Y)];
+  *moved_gradient_z += gradient_new[idx(Axis::Z)] - gradient_old[idx(Axis::Z)];
+  *moved_laplacian += laplacian_new - laplacian_old;
 #endif
 }
 
@@ -225,14 +225,14 @@ inline void add_derivatives(
   std::size_t other,
   JastrowPade::View jastrow,
   Particles::View particles,
-  xpu::soa_view<fp_t, idx(Derivatives::NUM)> derivatives
+  derivatives_view derivatives
 ) noexcept {
-  const xpu::array<fp_t, idx(Axis::NUM)> particle_pos{
+  const vec3_t particle_pos{
     particles.pos[idx(Axis::X)][particle],
     particles.pos[idx(Axis::Y)][particle],
     particles.pos[idx(Axis::Z)][particle]
   };
-  xpu::array<fp_t, idx(Axis::NUM)> pair_gradient{};
+  vec3_t pair_gradient{};
   auto pair_laplacian{0.0_fp};
 
   evaluate_pair_derivatives(
@@ -266,8 +266,8 @@ inline void delta_value(
   std::size_t moved,
   JastrowPade::View jastrow,
   Particles::View particles,
-  const xpu::array<fp_t, idx(Axis::NUM)>& old_pos,
-  const xpu::array<fp_t, idx(Axis::NUM)>& new_pos,
+  const vec3_t& old_pos,
+  const vec3_t& new_pos,
   fp_t* delta
 ) noexcept {
   delta_value(

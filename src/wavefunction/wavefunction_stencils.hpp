@@ -13,16 +13,14 @@ namespace wavefunction {
 CUDA_CALLABLE
 inline void derivative_sum(
   std::size_t i,
-  xpu::soa_view<fp_t, idx(Derivatives::NUM)> log_derivatives,
-  xpu::soa_view<fp_t, idx(Derivatives::NUM)> jastrow_derivatives
+  derivatives_view log_derivatives,
+  derivatives_view jastrow_derivatives
 ) {
   for (auto d{idx(Derivatives::GRAD_X)}; d < idx(Derivatives::NUM); ++d) {
     log_derivatives[d][i] += jastrow_derivatives[d][i];
   }
 }
 
-// All threads in the walker block must call this function together because it
-// synchronizes between stages. On the CPU it executes sequentially.
 CUDA_CALLABLE
 inline void evaluate_derivatives(
   WaveFunction::View wave_function,
