@@ -1,6 +1,7 @@
 #pragma once
 
 #include <xpu/config.hpp>
+#include "macros.hpp"
 
 #include <cstddef>
 
