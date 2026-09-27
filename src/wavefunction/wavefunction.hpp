@@ -38,18 +38,18 @@ public:
     SlaterPlaneWave::BatchView slater{};
 
     derivatives_batch_view jastrow_derivatives{
-      nullptr, 0uz, 0uz, 0uz
+      nullptr, 0uz, 0uz
     };
 
     std::uint8_t* jastrow_cache_valid{};
     std::size_t* steps_since_refresh{};
 
-    [[nodiscard]] CUDA_CALLABLE
+    [[nodiscard]] XPU_CUDA_CALLABLE
     std::size_t walker_count() const noexcept {
       return slater.walker_count();
     }
 
-    [[nodiscard]] CUDA_CALLABLE
+    [[nodiscard]] XPU_CUDA_CALLABLE
     View view(std::size_t walker) noexcept {
       assert(walker < this->walker_count());
 
@@ -150,11 +150,8 @@ public:
     std::size_t walker = 0uz
   ) noexcept;
 
-  void initialize_matrices(
-    Particles::BatchView particles,
-    std::size_t num_threads = 1uz
-  ) {
-    this->slater_plane_wave().initialize_matrices(particles, num_threads);
+  void initialize_matrices(Particles::BatchView particles) {
+    this->slater_plane_wave().initialize_matrices(particles);
   }
 
   fp_t evaluate_log_psi_from_matrix(

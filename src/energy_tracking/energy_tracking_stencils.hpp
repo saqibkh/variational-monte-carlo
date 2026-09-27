@@ -17,7 +17,7 @@ namespace energy {
 
 namespace {
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline fp_t evaluate_pair_energy(
   std::size_t other,
   fp_t L, fp_t half_L, fp_t alpha,
@@ -50,13 +50,13 @@ inline fp_t evaluate_pair_energy(
 
 } // namespace
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void initialize_reciprocal_energy(
   std::size_t i,
-  const fp_t* RESTRICT g_weights,
-  const fp_t* RESTRICT sum_real,
-  const fp_t* RESTRICT sum_imag,
-  fp_t* RESTRICT reciprocal_sum
+  const fp_t* XPU_RESTRICT g_weights,
+  const fp_t* XPU_RESTRICT sum_real,
+  const fp_t* XPU_RESTRICT sum_imag,
+  fp_t* XPU_RESTRICT reciprocal_sum
 ) noexcept {
   const auto contribution{
     g_weights[i] * (
@@ -72,14 +72,14 @@ inline void initialize_reciprocal_energy(
 #endif
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void update_real_energy(
   std::size_t other, std::size_t moved,
   fp_t L, fp_t half_L, fp_t alpha,
   const vec3_t& old_pos,
   const vec3_t& new_pos,
   vec3_view_t pos,
-  fp_t* RESTRICT delta
+  fp_t* XPU_RESTRICT delta
 ) noexcept {
   if (other == moved) { return; }
 
@@ -105,7 +105,7 @@ inline void update_real_energy(
 #endif
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline fp_t kinetic_energy_contribution(
   std::size_t i,
   derivatives_view derivatives
@@ -122,11 +122,11 @@ inline fp_t kinetic_energy_contribution(
   return derivatives[idx(Derivatives::LAP)][i] + gradient_squared;
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void kinetic_energy(
   std::size_t i,
   derivatives_view derivatives,
-  fp_t* RESTRICT kinetic_sum
+  fp_t* XPU_RESTRICT kinetic_sum
 ) noexcept {
   const auto contribution{kinetic_energy_contribution(i, derivatives)};
 
@@ -137,14 +137,14 @@ inline void kinetic_energy(
 #endif
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void kinetic_energy(
   std::size_t particle,
   EnergyTracker::View energy,
   Particles::View particles
 ) noexcept;
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void evaluate_local_energy(
   EnergyTracker::View energy,
   Particles::View particles,
@@ -171,14 +171,14 @@ inline void evaluate_local_energy(
   execution::sync();
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void update_structure_factors(
   std::size_t i,
   const vec3_t& old_pos,
   const vec3_t& new_pos,
   vec3_view_t g_vector,
-  fp_t* RESTRICT sum_real,
-  fp_t* RESTRICT sum_imag
+  fp_t* XPU_RESTRICT sum_real,
+  fp_t* XPU_RESTRICT sum_imag
 ) noexcept {
   const auto old_dot{
     g_vector[idx(Axis::X)][i] * old_pos[idx(Axis::X)] +
@@ -203,7 +203,7 @@ inline void update_structure_factors(
   sum_imag[i] += new_sin - old_sin;
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void initialize_reciprocal_energy(
   std::size_t g_index,
   EnergyTracker::View energy,
@@ -218,7 +218,7 @@ inline void initialize_reciprocal_energy(
   );
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void update_structure_factors(
   std::size_t g_index,
   EnergyTracker::View energy,
@@ -235,7 +235,7 @@ inline void update_structure_factors(
   );
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void update_real_energy(
   std::size_t other,
   std::size_t moved,
@@ -258,7 +258,7 @@ inline void update_real_energy(
   );
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void kinetic_energy(
   std::size_t particle,
   EnergyTracker::View energy,
@@ -271,7 +271,7 @@ inline void kinetic_energy(
   );
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline fp_t reciprocal_contribution(std::size_t g, EnergyTracker::View energy) noexcept {
   return energy.g_weights[g] * (
     energy.sum_real[g] * energy.sum_real[g] +
@@ -279,7 +279,7 @@ inline fp_t reciprocal_contribution(std::size_t g, EnergyTracker::View energy) n
   );
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void initialize_structure_factor(
   std::size_t g,
   EnergyTracker::View energy,
@@ -308,7 +308,7 @@ inline void initialize_structure_factor(
   energy.sum_imag[g] = imag_sum;
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void store_partial_sum(fp_t contribution, fp_t* scratch, fp_t* result) noexcept {
   const auto thread{execution::thread()};
   scratch[thread] = contribution;
@@ -327,7 +327,7 @@ inline void store_partial_sum(fp_t contribution, fp_t* scratch, fp_t* result) no
   execution::sync();
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void initialize_reciprocal_partial(
   EnergyTracker::InitializationView state,
   std::size_t begin,
@@ -346,7 +346,7 @@ inline void initialize_reciprocal_partial(
   store_partial_sum(contribution, scratch, partial_sum);
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void initialize_real_partial(
   EnergyTracker::InitializationView state,
   std::size_t begin,
@@ -377,7 +377,7 @@ inline void initialize_real_partial(
   store_partial_sum(contribution, scratch, partial_sum);
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void finalize_initial_energy(
   EnergyTracker::InitializationView state,
   std::size_t reciprocal_partial_count,
@@ -402,7 +402,7 @@ inline void finalize_initial_energy(
   }
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void accept_move(
   EnergyTracker::View energy,
   fp_t real_delta,

@@ -10,7 +10,7 @@ namespace jpade {
 
 namespace {
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline fp_t evaluate_pair_value(
   const vec3_t& particle_pos,
   std::size_t other,
@@ -39,7 +39,7 @@ inline fp_t evaluate_pair_value(
   return a * distance / (1.0_fp + b * distance);
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void evaluate_derivative_factors(
   const fp_t distance,
   const fp_t a,
@@ -69,7 +69,7 @@ inline void evaluate_derivative_factors(
   *laplacian_factor = second_derivative + 2.0_fp * first_derivative * inverse_distance;
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void evaluate_pair_derivatives(
   const vec3_t& particle_pos,
   std::size_t other,
@@ -111,7 +111,7 @@ inline void evaluate_pair_derivatives(
 
 } // namespace
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void value(
   std::size_t other,
   fp_t L, fp_t half_L,
@@ -135,7 +135,7 @@ inline void value(
 #endif
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void delta_value(
   std::size_t other,
   std::size_t moved,
@@ -170,7 +170,7 @@ inline void delta_value(
 #endif
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void compute_derivatives(
   std::size_t i,
   std::size_t moved,
@@ -219,7 +219,7 @@ inline void compute_derivatives(
 #endif
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void add_derivatives(
   std::size_t particle,
   std::size_t other,
@@ -260,7 +260,7 @@ inline void add_derivatives(
 #endif
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void delta_value(
   std::size_t other,
   std::size_t moved,

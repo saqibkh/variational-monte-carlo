@@ -17,7 +17,7 @@ struct DeterminantRatioContribution {
   const fp_t* new_row{};
   const fp_t* inverse_row{};
 
-  [[nodiscard]] CUDA_CALLABLE
+  [[nodiscard]] XPU_CUDA_CALLABLE
   fp_t operator()(const xpu::array<std::size_t, 1uz>& index) const {
     return stencil::slater::determinant_ratio_contribution(
       index[0uz],
@@ -31,7 +31,7 @@ struct LogAbsDetContribution {
   const fp_t* lower_upper{};
   std::size_t matrix_row_stride{};
 
-  [[nodiscard]] CUDA_CALLABLE
+  [[nodiscard]] XPU_CUDA_CALLABLE
   fp_t operator()(const xpu::array<std::size_t, 1uz>& index) const {
     return stencil::slater::compute_log_abs_det(
       index[0uz],
@@ -41,57 +41,49 @@ struct LogAbsDetContribution {
   }
 };
 
+struct InitializeTrigCache {
+  SlaterPlaneWave::BatchView slaters{};
+  Particles::BatchView particles{};
+
+  XPU_CUDA_CALLABLE
+  void operator()(const xpu::array<std::size_t, 3uz>& index) const noexcept {
+    const auto [walker, particle, k_index]{index};
+    auto slater_batch{slaters};
+    auto particle_batch{particles};
+
+    stencil::slater::update_trig_cache(
+      k_index,
+      particle,
+      slater_batch.view(walker),
+      particle_batch.view(walker)
+    );
+  }
+};
+
+struct InitializeMatrix {
+  SlaterPlaneWave::BatchView slaters{};
+
+  XPU_CUDA_CALLABLE
+  void operator()(const xpu::array<std::size_t, 3uz>& index) const noexcept {
+    const auto [walker, particle, orbital]{index};
+    auto slater_batch{slaters};
+
+    stencil::slater::initialize_matrix(
+      orbital,
+      particle,
+      slater_batch.view(walker)
+    );
+  }
+};
+
 #if defined(XPU_CUDA)
-constexpr auto initialization_columns{32uz};
-constexpr auto initialization_rows{8uz};
-
-__global__
-void cudaInitializeTrigCache(
-  SlaterPlaneWave::BatchView slaters,
-  Particles::BatchView particles
-) {
-  const auto [k_index, particle, walker]{xpu::global_index<3>()};
-
-  if (
-    k_index >= slaters.num_unique_k ||
-    particle >= slaters.num_orbitals ||
-    walker >= slaters.walker_count()
-  ) { return; }
-
-  stencil::slater::update_trig_cache(
-    k_index,
-    particle,
-    slaters.view(walker),
-    particles.view(walker)
-  );
-}
-
-__global__
-void cudaInitializeMatrices(
-  SlaterPlaneWave::BatchView slaters
-) {
-  const auto [orbital, particle, walker]{xpu::global_index<3>()};
-
-  if (
-    orbital >= slaters.num_orbitals ||
-    particle >= slaters.num_orbitals ||
-    walker >= slaters.walker_count()
-  ) { return; }
-
-  stencil::slater::initialize_matrix(
-    orbital,
-    particle,
-    slaters.view(walker)
-  );
-}
-
 __global__
 void cudaUpdateTrigRow(
   std::size_t num_unique_k,
   std::size_t offset, std::size_t particle,
   vec3_view_t particle_pos,
   vec3_view_t k_vector,
-  fp_t* RESTRICT sin_cache, fp_t* RESTRICT cos_cache
+  fp_t* XPU_RESTRICT sin_cache, fp_t* XPU_RESTRICT cos_cache
 ) {
   const auto [i]{xpu::global_index<1>()};
   if (i >= num_unique_k) { return; }
@@ -109,8 +101,8 @@ void cudaBuildTrigCache(
   std::size_t trig_row_stride,
   vec3_view_t particle_pos,
   vec3_view_t k_vector,
-  fp_t* RESTRICT sin_cache,
-  fp_t* RESTRICT cos_cache
+  fp_t* XPU_RESTRICT sin_cache,
+  fp_t* XPU_RESTRICT cos_cache
 ) {
   const auto [i, j]{xpu::global_index<2>()};
   if (i >= num_unique_k || j >= particle_pos.count()) { return; }
@@ -126,11 +118,11 @@ __global__
 void cudaBuildRow(
   std::size_t num_orbitals, std::size_t particle,
   std::size_t trig_row_stride,
-  const fp_t* RESTRICT sin_cache,
-  const fp_t* RESTRICT cos_cache,
-  const std::size_t* RESTRICT orbital_k_index,
-  const std::uint8_t* RESTRICT orbital_type,
-  fp_t* RESTRICT new_row
+  const fp_t* XPU_RESTRICT sin_cache,
+  const fp_t* XPU_RESTRICT cos_cache,
+  const std::size_t* XPU_RESTRICT orbital_k_index,
+  const std::uint8_t* XPU_RESTRICT orbital_type,
+  fp_t* XPU_RESTRICT new_row
 ) {
   const auto [i]{xpu::global_index<1>()};
   if (i >= num_orbitals) { return; }
@@ -148,11 +140,11 @@ void cudaBuildDeterminant(
   std::size_t num_orbitals,
   std::size_t trig_row_stride,
   std::size_t matrix_row_stride,
-  const fp_t* RESTRICT sin_cache,
-  const fp_t* RESTRICT cos_cache,
-  const std::size_t* RESTRICT orbital_k_index,
-  const std::uint8_t* RESTRICT orbital_type,
-  fp_t* RESTRICT determinant
+  const fp_t* XPU_RESTRICT sin_cache,
+  const fp_t* XPU_RESTRICT cos_cache,
+  const std::size_t* XPU_RESTRICT orbital_k_index,
+  const std::uint8_t* XPU_RESTRICT orbital_type,
+  fp_t* XPU_RESTRICT determinant
 ) {
   const auto [i, j]{xpu::global_index<2>()};
   if (i >= num_orbitals || j >= num_orbitals) { return; }
@@ -190,9 +182,9 @@ __global__
 void kUpdateInverse(
   std::size_t num_orbitals, std::size_t particle,
   std::size_t row_stride, fp_t inv_ratio,
-  const fp_t* RESTRICT inv_d_col,
-  const fp_t* RESTRICT solution_arr,
-  fp_t* RESTRICT inv_det
+  const fp_t* XPU_RESTRICT inv_d_col,
+  const fp_t* XPU_RESTRICT solution_arr,
+  fp_t* XPU_RESTRICT inv_det
 ) {
   const auto [i,j]{xpu::global_index<2>()};
   if (i >= num_orbitals || j >= num_orbitals) { return; }
@@ -208,9 +200,9 @@ __global__
 void kComputeSK(
   std::size_t num_orbitals, std::size_t particle,
   std::size_t row_stride,
-  const fp_t* RESTRICT new_row,
-  const fp_t* RESTRICT inv_det,
-  fp_t* RESTRICT solution_arr
+  const fp_t* XPU_RESTRICT new_row,
+  const fp_t* XPU_RESTRICT inv_det,
+  fp_t* XPU_RESTRICT solution_arr
 ) {
   const auto [i, j]{xpu::global_index<2>()};
   if (i >= num_orbitals || j >= num_orbitals) { return; }
@@ -228,67 +220,30 @@ void kComputeSK(
 
 inline void initialize_matrices(
   SlaterPlaneWave::BatchView slaters,
-  Particles::BatchView particles,
-  [[maybe_unused]] std::size_t num_threads
+  Particles::BatchView particles
 ) {
   const auto walker_count{slaters.walker_count()};
   if (walker_count == 0uz || slaters.num_orbitals == 0uz) { return; }
 
-#if defined(XPU_CUDA)
-  constexpr dim3 initializeTrigCacheThreads{
-    scast<unsigned int>(initialization_columns),
-    scast<unsigned int>(initialization_rows),
-    1u
+  const xpu::range<3uz> trig_elements{
+    {0uz, 0uz, 0uz},
+    {walker_count, slaters.num_orbitals, slaters.num_unique_k},
+    {1uz, 1uz, 1uz}
   };
-  const dim3 initializeTrigCacheBlocks{
-    xpu::block_per_dim(slaters.num_unique_k, initializeTrigCacheThreads.x),
-    xpu::block_per_dim(slaters.num_orbitals, initializeTrigCacheThreads.y),
-    scast<unsigned int>(walker_count)
+  xpu::parallel_for(
+    trig_elements,
+    InitializeTrigCache{slaters, particles}
+  );
+
+  const xpu::range<3uz> matrix_elements{
+    {0uz, 0uz, 0uz},
+    {walker_count, slaters.num_orbitals, slaters.num_orbitals},
+    {1uz, 1uz, 1uz}
   };
-
-  cudaInitializeTrigCache<<<
-    initializeTrigCacheBlocks, initializeTrigCacheThreads
-  >>>(slaters, particles);
-  xpu::cu_check(cudaGetLastError());
-
-  constexpr dim3 initializeMatricesThreads{
-    scast<unsigned int>(initialization_columns),
-    scast<unsigned int>(initialization_rows),
-    1u
-  };
-  const dim3 initializeMatricesBlocks{
-    xpu::block_per_dim(slaters.num_orbitals, initializeMatricesThreads.x),
-    xpu::block_per_dim(slaters.num_orbitals, initializeMatricesThreads.y),
-    scast<unsigned int>(walker_count)
-  };
-
-  cudaInitializeMatrices<<<
-    initializeMatricesBlocks, initializeMatricesThreads
-  >>>(slaters);
-  xpu::cu_check(cudaGetLastError());
-#else
-  #pragma omp parallel for num_threads(num_threads)
-  for (auto walker = 0uz; walker < walker_count; ++walker) {
-    const auto slater{slaters.view(walker)};
-    const auto walker_particles{particles.view(walker)};
-
-    for (auto particle = 0uz; particle < slater.num_orbitals; ++particle) {
-      #pragma omp simd
-      for (auto k_index = 0uz; k_index < slater.num_unique_k; ++k_index) {
-        stencil::slater::update_trig_cache(
-          k_index, particle, slater, walker_particles
-        );
-      }
-
-      #pragma omp simd
-      for (auto orbital = 0uz; orbital < slater.num_orbitals; ++orbital) {
-        stencil::slater::initialize_matrix(
-          orbital, particle, slater
-        );
-      }
-    }
-  }
-#endif
+  xpu::parallel_for(
+    matrix_elements,
+    InitializeMatrix{slaters}
+  );
 }
 
 inline void update_trig_cache(
@@ -296,7 +251,7 @@ inline void update_trig_cache(
   std::size_t offset, std::size_t particle,
   vec3_view_t particle_pos,
   vec3_view_t k_vector,
-  fp_t* RESTRICT sin_cache, fp_t* RESTRICT cos_cache
+  fp_t* XPU_RESTRICT sin_cache, fp_t* XPU_RESTRICT cos_cache
 ) {
 #if defined(XPU_CUDA)
   dim3 updateTrigRowThreads{256u};
@@ -330,8 +285,8 @@ inline void build_trig_cache(
   std::size_t trig_row_stride,
   vec3_view_t particle_pos,
   vec3_view_t k_vector,
-  fp_t* RESTRICT sin_cache,
-  fp_t* RESTRICT cos_cache
+  fp_t* XPU_RESTRICT sin_cache,
+  fp_t* XPU_RESTRICT cos_cache
 ) {
 #if defined(XPU_CUDA)
   dim3 buildTrigCacheThreads{16u, 16u};
@@ -366,11 +321,11 @@ inline void build_trig_cache(
 inline void build_row(
   std::size_t num_orbitals, std::size_t particle,
   std::size_t trig_row_stride,
-  const fp_t* RESTRICT sin_cache,
-  const fp_t* RESTRICT cos_cache,
-  const std::size_t* RESTRICT orbital_k_index,
-  const std::uint8_t* RESTRICT orbital_type,
-  fp_t* RESTRICT new_row
+  const fp_t* XPU_RESTRICT sin_cache,
+  const fp_t* XPU_RESTRICT cos_cache,
+  const std::size_t* XPU_RESTRICT orbital_k_index,
+  const std::uint8_t* XPU_RESTRICT orbital_type,
+  fp_t* XPU_RESTRICT new_row
 ) {
 #if defined(XPU_CUDA)
   dim3 buildRowThreads{256u};
@@ -403,11 +358,11 @@ inline void build_determinant(
   std::size_t num_orbitals,
   std::size_t trig_row_stride,
   std::size_t matrix_row_stride,
-  const fp_t* RESTRICT sin_cache,
-  const fp_t* RESTRICT cos_cache,
-  const std::size_t* RESTRICT orbital_k_index,
-  const std::uint8_t* RESTRICT orbital_type,
-  fp_t* RESTRICT determinant
+  const fp_t* XPU_RESTRICT sin_cache,
+  const fp_t* XPU_RESTRICT cos_cache,
+  const std::size_t* XPU_RESTRICT orbital_k_index,
+  const std::uint8_t* XPU_RESTRICT orbital_type,
+  fp_t* XPU_RESTRICT determinant
 ) {
 #if defined(XPU_CUDA)
   dim3 buildDeterminantThreads{16u, 16u};
@@ -572,9 +527,9 @@ inline void add_derivatives(
 inline void k_update_inverse(
   std::size_t num_orbitals, std::size_t particle,
   std::size_t row_stride, fp_t inv_ratio,
-  const fp_t* RESTRICT inv_d_col,
-  const fp_t* RESTRICT solution_arr,
-  fp_t* RESTRICT inv_det
+  const fp_t* XPU_RESTRICT inv_d_col,
+  const fp_t* XPU_RESTRICT solution_arr,
+  fp_t* XPU_RESTRICT inv_det
 ) {
 #if defined(XPU_CUDA)
   dim3 kUpdateInverseThreads{16u, 16u};
@@ -606,9 +561,9 @@ inline void k_update_inverse(
 inline void k_compute_sk(
   std::size_t num_orbitals, std::size_t particle,
   std::size_t row_stride,
-  const fp_t* RESTRICT new_row,
-  const fp_t* RESTRICT inv_det,
-  fp_t* RESTRICT solution_arr
+  const fp_t* XPU_RESTRICT new_row,
+  const fp_t* XPU_RESTRICT inv_det,
+  fp_t* XPU_RESTRICT solution_arr
 ) {
 #if defined(XPU_CUDA)
   dim3 kComputeSKThreads{16u, 16u};

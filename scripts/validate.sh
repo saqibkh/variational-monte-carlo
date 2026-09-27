@@ -75,22 +75,14 @@ run_pipeline() {
     -DBUILD_TESTING=OFF
     -DVMC_BUILD_VALIDATION=ON
     -DCMAKE_BUILD_TYPE=Release
+    -DFETCHCONTENT_UPDATES_DISCONNECTED=OFF
   )
 
   local cached_dependency_root="$repo_root/build-test-cpu/_deps"
-  if [ -d "$cached_dependency_root/xpu-src" ]; then
-    cmake_arguments+=(
-      -DFETCHCONTENT_SOURCE_DIR_XPU="$cached_dependency_root/xpu-src"
-    )
-  fi
   if [ -d "$cached_dependency_root/catch2-src" ]; then
     cmake_arguments+=(
       -DFETCHCONTENT_SOURCE_DIR_CATCH2="$cached_dependency_root/catch2-src"
     )
-  fi
-
-  if [ -d "$build_dir/_deps/xpu-src" ] && [ -d "$build_dir/_deps/catch2-src" ]; then
-    cmake_arguments+=(-DFETCHCONTENT_UPDATES_DISCONNECTED=ON)
   fi
 
   if [ "$backend" = "cuda" ]; then

@@ -16,6 +16,13 @@ private:
   };
   xpu::soa_batch<fp_t, idx(ArrayIndex::NUM_SUB_ARRAYS)> data_;
 
+  using PosBatchView = xpu::soa_batch_view<
+    fp_t, idx(Axis::NUM), idx(ArrayIndex::NUM_SUB_ARRAYS)
+  >;
+  using DerivativesBatchView = xpu::soa_batch_view<
+    fp_t, idx(Derivatives::NUM), idx(ArrayIndex::NUM_SUB_ARRAYS)
+  >;
+
 public:
   struct View {
     std::size_t count{};
@@ -24,24 +31,24 @@ public:
   };
 
   struct BatchView {
-    vec3_batch_view_t pos{
-      nullptr, 0uz, 0uz, 0uz
+    PosBatchView pos{
+      nullptr, 0uz, 0uz
     };
-    derivatives_batch_view derivatives{
-      nullptr, 0uz, 0uz, 0uz
+    DerivativesBatchView derivatives{
+      nullptr, 0uz, 0uz
     };
 
-    [[nodiscard]] CUDA_CALLABLE
+    [[nodiscard]] XPU_CUDA_CALLABLE
     std::size_t count() const noexcept {
       return pos.element_count();
     }
 
-    [[nodiscard]] CUDA_CALLABLE
+    [[nodiscard]] XPU_CUDA_CALLABLE
     std::size_t walker_count() const noexcept {
       return pos.batch_count();
     }
 
-    [[nodiscard]] CUDA_CALLABLE
+    [[nodiscard]] XPU_CUDA_CALLABLE
     View view(std::size_t walker) noexcept {
       return {
         this->count(),

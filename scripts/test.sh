@@ -75,11 +75,8 @@ run_pipeline() {
     -DBUILD_TESTING=ON
     -DVMC_BUILD_VALIDATION=OFF
     -DCMAKE_BUILD_TYPE=Debug
+    -DFETCHCONTENT_UPDATES_DISCONNECTED=OFF
   )
-
-  if [ -d "$build_dir/_deps/xpu-src" ] && [ -d "$build_dir/_deps/catch2-src" ]; then
-    cmake_args+=(-DFETCHCONTENT_UPDATES_DISCONNECTED=ON)
-  fi
 
   if [ "$backend" = "cuda" ]; then
     cuda_flag="ON"

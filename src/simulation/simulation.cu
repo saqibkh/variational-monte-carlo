@@ -61,10 +61,7 @@ void Simulation::initialize_walkers() {
     config_.box_length
   );
 
-  wave_function_.initialize_matrices(
-    particles_.batch_view(),
-    config_.num_threads
-  );
+  wave_function_.initialize_matrices(particles_.batch_view());
 
   for (auto walker{0uz}; walker < particles_.walker_count(); ++walker) {
     const auto walker_particles{particles_.view(walker)};

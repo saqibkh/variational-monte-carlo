@@ -32,7 +32,7 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install build dependencies
         run: |
@@ -42,18 +42,25 @@ jobs:
           sudo apt-get update
           sudo apt-get install --yes g++-15 liblapacke-dev libopenblas-dev ninja-build
 
+      - name: Resolve xpu revision
+        id: xpu
+        run: |
+          revision="$(git ls-remote https://github.com/UWHPC/xpu.git refs/heads/main | cut -f1)"
+          echo "Building against xpu ${revision}"
+          echo "revision=${revision}" >> "$GITHUB_OUTPUT"
+
       - name: Cache fetched dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: build-test-cpu/_deps
-          key: ${{ runner.os }}-cpu-tests-${{ matrix.configuration }}-${{ hashFiles('CMakeLists.txt') }}
+          key: ${{ runner.os }}-cpu-tests-${{ matrix.configuration }}-${{ hashFiles('CMakeLists.txt') }}-xpu-${{ steps.xpu.outputs.revision }}
 
       - name: Build and run tests
         run: ./scripts/test.sh --cpu ${{ matrix.arguments }}
 
       - name: Upload test failure log
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: cpu-tests-${{ matrix.configuration }}-failure-log
           path: build-test-cpu/Testing/Temporary/LastTest.log
@@ -66,7 +73,7 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install host build dependencies
         run: |
@@ -84,11 +91,18 @@ jobs:
           sub-packages: '["compiler", "cudart-dev"]'
           non-cuda-sub-packages: '["libcublas-dev", "libcusolver-dev", "libcurand-dev", "libcusparse-dev", "libnvjitlink-dev"]'
 
+      - name: Resolve xpu revision
+        id: xpu
+        run: |
+          revision="$(git ls-remote https://github.com/UWHPC/xpu.git refs/heads/main | cut -f1)"
+          echo "Building against xpu ${revision}"
+          echo "revision=${revision}" >> "$GITHUB_OUTPUT"
+
       - name: Cache fetched dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: build-ci-cuda/_deps
-          key: ${{ runner.os }}-cuda-${{ hashFiles('CMakeLists.txt') }}
+          key: ${{ runner.os }}-cuda-${{ hashFiles('CMakeLists.txt') }}-xpu-${{ steps.xpu.outputs.revision }}
 
       - name: Configure CUDA tests and validation
         run: |

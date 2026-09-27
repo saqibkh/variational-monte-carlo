@@ -37,7 +37,7 @@ public:
     std::size_t proposed{};
     std::size_t accepted{};
 
-    [[nodiscard]] CUDA_CALLABLE
+    [[nodiscard]] XPU_CUDA_CALLABLE
     fp_t acceptance_rate() const noexcept {
       if (proposed == 0uz) {
         return 0.0_fp;
@@ -110,12 +110,12 @@ public:
     StepResult* step_results{};
     fp_t* local_energies{};
 
-    [[nodiscard]] CUDA_CALLABLE
+    [[nodiscard]] XPU_CUDA_CALLABLE
     std::size_t walker_count() const noexcept {
       return particles.walker_count();
     }
 
-    [[nodiscard]] CUDA_CALLABLE
+    [[nodiscard]] XPU_CUDA_CALLABLE
     View view(std::size_t walker) noexcept {
       return {
         particles.view(walker),

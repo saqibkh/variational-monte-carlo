@@ -71,7 +71,7 @@ public:
     const fp_t* g_weights{};
 
     xpu::soa_batch_view<fp_t, idx(WalkerArray::NUM_ARRAYS)> walker_data{
-      nullptr, 0uz, 0uz, 0uz
+      nullptr, 0uz, 0uz
     };
     xpu::soa_view<fp_t, idx(WalkerScalar::NUM_ARRAYS)> walker_scalars{
       nullptr, 0uz
@@ -79,12 +79,12 @@ public:
 
     fp_t* reduction_scratch{};
 
-    [[nodiscard]] CUDA_CALLABLE
+    [[nodiscard]] XPU_CUDA_CALLABLE
     std::size_t walker_count() const noexcept {
       return walker_data.batch_count();
     }
 
-    [[nodiscard]] CUDA_CALLABLE
+    [[nodiscard]] XPU_CUDA_CALLABLE
     View view(std::size_t walker) noexcept {
       auto data{walker_data.view(walker)};
 
@@ -121,7 +121,7 @@ public:
     std::size_t reciprocal_partial_count{};
     std::size_t real_partial_count{};
 
-    [[nodiscard]] CUDA_CALLABLE
+    [[nodiscard]] XPU_CUDA_CALLABLE
     InitializationView view(std::size_t walker) noexcept {
       return {
         energy.view(walker),
@@ -131,7 +131,7 @@ public:
       };
     }
 
-    [[nodiscard]] CUDA_CALLABLE
+    [[nodiscard]] XPU_CUDA_CALLABLE
     InitializationView operator[](std::size_t walker) noexcept {
       return this->view(walker);
     }

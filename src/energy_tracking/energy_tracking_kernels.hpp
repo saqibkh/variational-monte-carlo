@@ -18,7 +18,7 @@ struct KineticEnergyContribution {
     nullptr, 0uz
   };
 
-  [[nodiscard]] CUDA_CALLABLE
+  [[nodiscard]] XPU_CUDA_CALLABLE
   fp_t operator()(const xpu::array<std::size_t, 1uz>& index) const {
     return stencil::energy::kinetic_energy_contribution(
       index[0uz],
@@ -34,7 +34,7 @@ void cudaUpdateRealEnergy(
   fp_t L, fp_t half_L, fp_t alpha,
   vec3_t old_pos,
   vec3_view_t pos,
-  fp_t* RESTRICT delta
+  fp_t* XPU_RESTRICT delta
 ) {
   const auto [i]{xpu::global_index<1>()};
   if (i >= pos.count()) { return; }
@@ -58,8 +58,8 @@ void cudaUpdateStructureFactors(
   vec3_t old_pos,
   vec3_t new_pos,
   vec3_view_t g_vector,
-  fp_t* RESTRICT sum_real,
-  fp_t* RESTRICT sum_imag
+  fp_t* XPU_RESTRICT sum_real,
+  fp_t* XPU_RESTRICT sum_imag
 ) {
   const auto [i]{xpu::global_index<1>()};
   if (i >= g_vector.count()) { return; }
@@ -80,7 +80,7 @@ inline fp_t update_real_energy(
   fp_t L, fp_t half_L, fp_t alpha,
   vec3_t old_pos,
   vec3_view_t pos,
-  fp_t* RESTRICT delta_scratch
+  fp_t* XPU_RESTRICT delta_scratch
 ) noexcept {
 #if defined(XPU_CUDA)
   xpu::zero_n(delta_scratch, 1uz);
@@ -145,7 +145,7 @@ inline std::size_t kinetic_energy_scratch_bytes(
 
 inline fp_t kinetic_energy(
   derivatives_view derivatives,
-  fp_t* RESTRICT kinetic_sum_scratch,
+  fp_t* XPU_RESTRICT kinetic_sum_scratch,
   void* scratch,
   std::size_t scratch_bytes
 ) noexcept {
@@ -173,8 +173,8 @@ inline void update_structure_factors(
   vec3_t old_pos,
   vec3_t new_pos,
   vec3_view_t g_vector,
-  fp_t* RESTRICT sum_real,
-  fp_t* RESTRICT sum_imag
+  fp_t* XPU_RESTRICT sum_real,
+  fp_t* XPU_RESTRICT sum_imag
 ) noexcept {
 #if defined(XPU_CUDA)
   dim3 updateStructureFactorsThreads{256u};

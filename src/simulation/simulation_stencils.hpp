@@ -25,16 +25,7 @@
 namespace stencil {
 namespace simulation {
 
-DEVICE_ONLY
-inline void seed_generator(
-  xpu::random::generator* generator,
-  std::uint64_t master_seed,
-  std::uint64_t walker_id
-) {
-  generator->seed(master_seed, walker_id);
-}
-
-DEVICE_ONLY
+XPU_DEVICE_ONLY
 inline void initialize_walker_positions(
   const Simulation::View simulation,
   fp_t box_length
@@ -49,7 +40,7 @@ inline void initialize_walker_positions(
   }
 }
 
-[[nodiscard]] DEVICE_ONLY
+[[nodiscard]] XPU_DEVICE_ONLY
 inline Simulation::RandomProposal generate_random_proposal(
   xpu::random::generator& generator,
   std::size_t num_particles,
@@ -71,7 +62,7 @@ inline Simulation::RandomProposal generate_random_proposal(
   };
 }
 
-DEVICE_ONLY
+XPU_DEVICE_ONLY
 inline void propose_move(
   Simulation::View simulation,
   fp_t step_size,
@@ -119,7 +110,7 @@ inline void propose_move(
   scratch.jastrow_delta = 0.0_fp;
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void update_trig_cache(
   Simulation::View simulation,
   const Simulation::MetropolisScratch& scratch
@@ -142,7 +133,7 @@ inline void update_trig_cache(
   }
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void build_slater_row(
   Simulation::View simulation,
   const Simulation::MetropolisScratch& scratch
@@ -159,7 +150,7 @@ inline void build_slater_row(
   }
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void calculate_probability_ratio(
   Simulation::View simulation,
   Simulation::MetropolisScratch& scratch
@@ -187,7 +178,7 @@ inline void calculate_probability_ratio(
   }
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void decide_move(
   Simulation::MetropolisScratch& scratch
 ) noexcept {
@@ -208,7 +199,7 @@ inline void decide_move(
   scratch.result.log_psi_delta = log_psi_delta;
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void reject_move(
   Simulation::View simulation,
   const Simulation::MetropolisScratch& scratch
@@ -231,7 +222,7 @@ inline void reject_move(
   }
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void prepare_inverse_update(
   Simulation::View simulation,
   const Simulation::MetropolisScratch& scratch
@@ -246,7 +237,7 @@ inline void prepare_inverse_update(
   }
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void calculate_inverse_solution(
   Simulation::View simulation,
   const Simulation::MetropolisScratch& scratch
@@ -266,7 +257,7 @@ inline void calculate_inverse_solution(
   }
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void commit_slater_move(
   Simulation::View simulation,
   const Simulation::MetropolisScratch& scratch
@@ -295,7 +286,7 @@ inline void commit_slater_move(
   }
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void update_structure_factors(
   Simulation::View simulation,
   const Simulation::MetropolisScratch& scratch
@@ -311,7 +302,7 @@ inline void update_structure_factors(
   }
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void reset_energy_reductions(
   Simulation::MetropolisScratch& scratch
 ) noexcept {
@@ -320,7 +311,7 @@ inline void reset_energy_reductions(
   scratch.reciprocal_sum = 0.0_fp;
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void calculate_energy_deltas(
   Simulation::View simulation,
   Simulation::MetropolisScratch& scratch
@@ -350,7 +341,7 @@ inline void calculate_energy_deltas(
   }
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void finalize_energy(
   Simulation::View simulation,
   Simulation::MetropolisScratch& scratch
@@ -369,7 +360,7 @@ inline void finalize_energy(
   scratch.result.reciprocal_energy = reciprocal_prefactor * scratch.reciprocal_sum;
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void commit_energy(
   Simulation::View simulation,
   const Simulation::MetropolisScratch& scratch
@@ -380,7 +371,7 @@ inline void commit_energy(
   *simulation.energy_tracker.reciprocal_energy = scratch.result.reciprocal_energy;
 }
 
-DEVICE_ONLY
+XPU_DEVICE_ONLY
 inline void metropolis_step(
   Simulation::View simulation,
   fp_t step_size,
@@ -432,7 +423,7 @@ inline void metropolis_step(
   execution::sync();
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void measure_walker(Simulation::View simulation) noexcept {
   stencil::wavefunction::evaluate_derivatives(
     simulation.wave_function,
@@ -448,7 +439,7 @@ inline void measure_walker(Simulation::View simulation) noexcept {
   execution::sync();
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void initialize_walker_state(
   Simulation::WalkerState& state,
   fp_t step_size,
@@ -460,7 +451,7 @@ inline void initialize_walker_state(
   state.step_size = xpu::min(step_size, maximum_step_fraction * box_length);
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void reset_walker_measurements(
   Simulation::WalkerState& state
 ) noexcept {
@@ -470,7 +461,7 @@ inline void reset_walker_measurements(
   state.step_size = step_size;
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void reset_sweep_result(
   Simulation::MetropolisScratch& scratch
 ) noexcept {
@@ -481,7 +472,7 @@ inline void reset_sweep_result(
   scratch.sweep_result = {};
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void record_proposal(
   Simulation::MetropolisScratch& scratch
 ) noexcept {
@@ -493,7 +484,7 @@ inline void record_proposal(
   scratch.sweep_result.accepted += scast<std::size_t>(scratch.result.accepted);
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void update_walker_step_size(
   Simulation::WalkerState& state,
   const Simulation::SweepResult& result,
@@ -513,7 +504,7 @@ inline void update_walker_step_size(
   state.step_size = xpu::min(state.step_size, maximum_step_size);
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void record_walker_sweep(
   Simulation::WalkerState& state,
   const Simulation::SweepResult& result
@@ -522,7 +513,7 @@ inline void record_walker_sweep(
   state.accepted += result.accepted;
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void record_walker_energy(
   Simulation::WalkerState& state,
   fp_t local_energy,
@@ -550,7 +541,7 @@ inline void record_walker_energy(
   state.samples_in_block = {};
 }
 
-DEVICE_ONLY
+XPU_DEVICE_ONLY
 inline void run_sweep(
   Simulation::View simulation,
   Simulation::WalkerState& state,
@@ -576,7 +567,7 @@ inline void run_sweep(
   }
 }
 
-DEVICE_ONLY
+XPU_DEVICE_ONLY
 inline void run_walker(
   Simulation::View simulation,
   Simulation::WalkerState& state,
@@ -642,7 +633,7 @@ inline void run_walker(
   }
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void finalize_run(
   const Simulation::WalkerState* states,
   std::size_t walker_count,

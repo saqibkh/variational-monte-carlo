@@ -200,6 +200,10 @@ if(VMC_CUDA)
   set_target_properties(vmc_lib PROPERTIES
     CUDA_SEPARABLE_COMPILATION ON
   )
+
+  target_compile_options(vmc_lib PUBLIC
+    $<$<COMPILE_LANGUAGE:CUDA>:--expt-relaxed-constexpr>
+  )
 endif()
 
 # --- Main executable ---

@@ -92,7 +92,7 @@ inline void solve_lower_upper(
   }
 }
 
-CUDA_CALLABLE [[nodiscard]]
+XPU_CUDA_CALLABLE [[nodiscard]]
 inline bool is_canonical(int n_x, int n_y, int n_z) {
   if (n_x > 0) {
     return true;

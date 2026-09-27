@@ -10,7 +10,7 @@
 namespace stencil {
 namespace wavefunction {
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void derivative_sum(
   std::size_t i,
   derivatives_view log_derivatives,
@@ -21,7 +21,7 @@ inline void derivative_sum(
   }
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void evaluate_derivatives(
   WaveFunction::View wave_function,
   Particles::View particles

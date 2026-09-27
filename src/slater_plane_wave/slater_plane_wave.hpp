@@ -95,26 +95,26 @@ public:
     const std::uint8_t* orbital_type{};
 
     xpu::soa_batch_view<fp_t, NUM_MATRIX> matrices{
-      nullptr, 0uz, 0uz, 0uz
+      nullptr, 0uz, 0uz
     };
     xpu::soa_batch_view<fp_t, NUM_WALKER_VECTORS> walker_vectors{
-      nullptr, 0uz, 0uz, 0uz
+      nullptr, 0uz, 0uz
     };
     xpu::soa_batch_view<fp_t, NUM_TRIG_ARRAYS> trig_cache{
-      nullptr, 0uz, 0uz, 0uz
+      nullptr, 0uz, 0uz
     };
     xpu::soa_batch_view<fp_t, NUM_SCRATCH_TRIG> trig_scratch{
-      nullptr, 0uz, 0uz, 0uz
+      nullptr, 0uz, 0uz
     };
 
     fp_t* reduction_scratch{};
 
-    [[nodiscard]] CUDA_CALLABLE
+    [[nodiscard]] XPU_CUDA_CALLABLE
     std::size_t walker_count() const noexcept {
       return matrices.batch_count();
     }
 
-    [[nodiscard]] CUDA_CALLABLE
+    [[nodiscard]] XPU_CUDA_CALLABLE
     View view(std::size_t walker) noexcept {
       auto matrix{matrices.view(walker)};
       auto vectors{walker_vectors.view(walker)};
@@ -238,10 +238,7 @@ public:
   fp_t log_abs_det(Particles::View particles, std::size_t walker = 0uz);
   fp_t factorize(std::size_t walker = 0uz);
 
-  void initialize_matrices(
-    Particles::BatchView particles,
-    std::size_t num_threads = 1uz
-  );
+  void initialize_matrices(Particles::BatchView particles);
 
   fp_t* build_row(std::size_t particle, std::size_t walker = 0uz) noexcept;
 

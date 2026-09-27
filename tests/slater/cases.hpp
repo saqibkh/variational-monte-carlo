@@ -54,7 +54,7 @@ TEST_CASE("Batched Slater walkers match independent calculations", "[slater][wal
   }
 
   SlaterPlaneWave batched{particles, test::slater_box_length};
-  batched.initialize_matrices(particles.batch_view(), 2uz);
+  batched.initialize_matrices(particles.batch_view());
 
   std::array<fp_t, test::slater_walker_count> batched_log_determinants{};
 
@@ -116,7 +116,7 @@ TEST_CASE("Batched Slater initialization preserves singular detection", "[slater
   }
 
   SlaterPlaneWave slater{particles, test::slater_box_length};
-  slater.initialize_matrices(particles.batch_view(), 2uz);
+  slater.initialize_matrices(particles.batch_view());
 
   for (auto walker{0uz}; walker < test::slater_walker_count; ++walker) {
     const auto log_determinant{slater.factorize(walker)};

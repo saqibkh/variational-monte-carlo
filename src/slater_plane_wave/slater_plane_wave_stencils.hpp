@@ -11,12 +11,12 @@ namespace stencil {
 namespace slater {
 
 template <typename PositionType, typename KVectorType>
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void update_trig_cache(
   std::size_t i, std::size_t offset, std::size_t particle,
   xpu::soa_view<PositionType, idx(Axis::NUM)> particle_pos,
   xpu::soa_view<KVectorType, idx(Axis::NUM)> k_vector,
-  fp_t* RESTRICT sin_cache, fp_t* RESTRICT cos_cache
+  fp_t* XPU_RESTRICT sin_cache, fp_t* XPU_RESTRICT cos_cache
 ) {
   const auto dot{
     k_vector[idx(Axis::X)][i] * particle_pos[idx(Axis::X)][particle] +
@@ -28,15 +28,15 @@ inline void update_trig_cache(
   xpu::sincos(dot, &sin_cache[idx], &cos_cache[idx]);
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void build_row(
   std::size_t i, std::size_t particle,
   std::size_t trig_row_stride,
-  const fp_t* RESTRICT sin_cache,
-  const fp_t* RESTRICT cos_cache,
-  const std::size_t* RESTRICT orbital_k_index,
-  const std::uint8_t* RESTRICT orbital_type,
-  fp_t* RESTRICT new_row
+  const fp_t* XPU_RESTRICT sin_cache,
+  const fp_t* XPU_RESTRICT cos_cache,
+  const std::size_t* XPU_RESTRICT orbital_k_index,
+  const std::uint8_t* XPU_RESTRICT orbital_type,
+  fp_t* XPU_RESTRICT new_row
 ) {
   const auto trig_idx{
     particle * trig_row_stride + orbital_k_index[i]
@@ -48,7 +48,7 @@ inline void build_row(
   new_row[i] = cos_term + type * (sin_term - cos_term);
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void initialize_matrix(
   std::size_t orbital,
   std::size_t particle,
@@ -70,11 +70,11 @@ inline void initialize_matrix(
   slater.lower_upper[offset + orbital] = slater.determinant[offset + orbital];
 }
 
-[[nodiscard]] CUDA_CALLABLE
+[[nodiscard]] XPU_CUDA_CALLABLE
 inline fp_t compute_log_abs_det(
   std::size_t orbital,
   std::size_t matrix_row_stride,
-  const fp_t* RESTRICT lower_upper
+  const fp_t* XPU_RESTRICT lower_upper
 ) {
   const auto diagonal{
     lower_upper[orbital * matrix_row_stride + orbital]
@@ -83,23 +83,23 @@ inline fp_t compute_log_abs_det(
   return xpu::log(xpu::abs(diagonal));
 }
 
-[[nodiscard]] CUDA_CALLABLE
+[[nodiscard]] XPU_CUDA_CALLABLE
 inline fp_t determinant_ratio_contribution(
   std::size_t orbital,
-  const fp_t* RESTRICT new_row,
-  const fp_t* RESTRICT inverse_row
+  const fp_t* XPU_RESTRICT new_row,
+  const fp_t* XPU_RESTRICT inverse_row
 ) {
   return new_row[orbital] * inverse_row[orbital];
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void determinant_ratio(
   std::size_t orbital,
   std::size_t particle,
   std::size_t matrix_row_stride,
-  const fp_t* RESTRICT new_row,
-  const fp_t* RESTRICT inv_det,
-  fp_t* RESTRICT ratio
+  const fp_t* XPU_RESTRICT new_row,
+  const fp_t* XPU_RESTRICT inv_det,
+  fp_t* XPU_RESTRICT ratio
 ) {
   const auto contribution{
     determinant_ratio_contribution(
@@ -116,7 +116,7 @@ inline void determinant_ratio(
 #endif
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void add_derivatives(
   std::size_t particle,
   std::size_t orbital,
@@ -165,7 +165,7 @@ inline void add_derivatives(
 #endif
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void accumulate_derivatives(
   std::size_t i,
   derivatives_view derivatives
@@ -182,14 +182,14 @@ inline void accumulate_derivatives(
   derivatives[idx(Derivatives::LAP)][i] -= gradient_magnitude;
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void k_update_inverse(
   std::size_t i, std::size_t j,
   std::size_t particle,
   std::size_t row_stride, fp_t inv_ratio,
-  const fp_t* RESTRICT inv_d_col,
-  const fp_t* RESTRICT solution_arr,
-  fp_t* RESTRICT inv_det
+  const fp_t* XPU_RESTRICT inv_d_col,
+  const fp_t* XPU_RESTRICT solution_arr,
+  fp_t* XPU_RESTRICT inv_det
 ) {
   const auto idx{j * row_stride + i};
   const auto factor{inv_d_col[i] * inv_ratio};
@@ -201,13 +201,13 @@ inline void k_update_inverse(
   }
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void k_compute_sk(
   std::size_t i, std::size_t j,
   std::size_t row_stride,
-  const fp_t* RESTRICT new_row,
-  const fp_t* RESTRICT inv_det,
-  fp_t* RESTRICT solution
+  const fp_t* XPU_RESTRICT new_row,
+  const fp_t* XPU_RESTRICT inv_det,
+  fp_t* XPU_RESTRICT solution
 ) {
   const auto product{new_row[i] * inv_det[j * row_stride + i]};
 
@@ -218,7 +218,7 @@ inline void k_compute_sk(
 #endif
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void update_trig_cache(
   std::size_t k_index,
   std::size_t particle,
@@ -236,7 +236,7 @@ inline void update_trig_cache(
   );
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void build_row(
   std::size_t orbital,
   std::size_t particle,
@@ -254,7 +254,7 @@ inline void build_row(
   );
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void determinant_ratio(
   std::size_t orbital,
   std::size_t particle,
@@ -271,7 +271,7 @@ inline void determinant_ratio(
   );
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void k_update_inverse(
   std::size_t column,
   std::size_t row,

@@ -9,60 +9,40 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <numeric>
+#include <vector>
 
 namespace kernel {
 namespace simulation {
+
+namespace {
+
+struct InitializePositions {
+  Simulation::BatchView simulations{};
+  fp_t box_length{};
+
+  XPU_DEVICE_ONLY
+  void operator()(const xpu::array<std::size_t, 1uz>& index) const noexcept {
+    auto batch{simulations};
+
+    stencil::simulation::initialize_walker_positions(
+      batch.view(index[0uz]),
+      box_length
+    );
+  }
+};
+
+} // namespace
 
 #if defined(XPU_CUDA)
 
 namespace {
 
 __global__
-void cudaSeedGenerator(
-  xpu::random::generator* generator,
-  std::uint64_t master_seed,
-  std::uint64_t walker_id
-) {
-  stencil::simulation::seed_generator(generator, master_seed, walker_id);
-}
-
-__global__
-void cudaSeedGenerators(
-  xpu::random::generator* generators,
-  std::size_t walker_count,
-  std::uint64_t master_seed,
-  std::uint64_t first_walker_id
-) {
-  const auto [walker]{xpu::global_index<1>()};
-  if (walker >= walker_count) { return; }
-
-  stencil::simulation::seed_generator(
-    generators + walker,
-    master_seed,
-    first_walker_id + walker
-  );
-}
-
-__global__
 void cudaInitializeWalkerPositions(
   const Simulation::View simulation,
   fp_t box_length
 ) {
-  stencil::simulation::initialize_walker_positions(
-    simulation,
-    box_length
-  );
-}
-
-__global__
-void cudaInitializePositions(
-  Simulation::BatchView simulations,
-  fp_t box_length
-) {
-  const auto [walker]{xpu::global_index<1>()};
-  if (walker >= simulations.walker_count()) { return; }
-
-  const auto simulation{simulations.view(walker)};
   stencil::simulation::initialize_walker_positions(
     simulation,
     box_length
@@ -188,28 +168,6 @@ void cudaFinalizeRun(
 
 #endif
 
-inline void seed_generator(
-  xpu::random::generator* generator,
-  std::uint64_t master_seed,
-  std::uint64_t walker_id
-) {
-#if defined(XPU_CUDA)
-  constexpr dim3 seedGeneratorThreads{1u};
-  constexpr dim3 seedGeneratorBlocks{1u};
-
-  cudaSeedGenerator<<<
-    seedGeneratorBlocks, seedGeneratorThreads
-  >>>(
-    generator,
-    master_seed,
-    walker_id
-  );
-  xpu::cu_check(cudaGetLastError());
-#else
-  stencil::simulation::seed_generator(generator, master_seed, walker_id);
-#endif
-}
-
 inline void seed_generators(
   xpu::random::generator* generators,
   std::size_t walker_count,
@@ -218,30 +176,18 @@ inline void seed_generators(
 ) {
   if (walker_count == 0uz) { return; }
 
-#if defined(XPU_CUDA)
-  constexpr dim3 seedGeneratorsThreads{256u};
-  const dim3 seedGeneratorsBlocks{
-    xpu::block_per_dim(walker_count, seedGeneratorsThreads.x)
-  };
+  std::vector<std::uint64_t> host_stream_ids(walker_count);
+  std::iota(host_stream_ids.begin(), host_stream_ids.end(), first_walker_id);
 
-  cudaSeedGenerators<<<
-    seedGeneratorsBlocks, seedGeneratorsThreads
-  >>>(
+  xpu::buffer<std::uint64_t> stream_ids{walker_count};
+  xpu::copy_n(stream_ids.data(), host_stream_ids.data(), walker_count);
+
+  xpu::random::seed_n(
     generators,
+    stream_ids.data(),
     walker_count,
-    master_seed,
-    first_walker_id
+    master_seed
   );
-  xpu::cu_check(cudaGetLastError());
-#else
-  for (auto walker{0uz}; walker < walker_count; ++walker) {
-    stencil::simulation::seed_generator(
-      generators + walker,
-      master_seed,
-      first_walker_id + walker
-    );
-  }
-#endif
 }
 
 inline void initialize_positions(
@@ -271,30 +217,16 @@ inline void initialize_positions(
   Simulation::BatchView simulations,
   fp_t box_length
 ) {
-  const auto walker_count{simulations.walker_count()};
-
-#if defined(XPU_CUDA)
-  constexpr dim3 initializePositionsThreads{256u};
-  const dim3 initializePositionsBlocks{
-    xpu::block_per_dim(walker_count, initializePositionsThreads.x)
+  const xpu::range<1uz> walkers{
+    {0uz},
+    {simulations.walker_count()},
+    {1uz}
   };
 
-  cudaInitializePositions<<<
-    initializePositionsBlocks, initializePositionsThreads
-  >>>(
-    simulations,
-    box_length
+  xpu::parallel_for(
+    walkers,
+    InitializePositions{simulations, box_length}
   );
-  xpu::cu_check(cudaGetLastError());
-#else
-  for (auto walker{0uz}; walker < walker_count; ++walker) {
-    const auto simulation{simulations.view(walker)};
-    stencil::simulation::initialize_walker_positions(
-      simulation,
-      box_length
-    );
-  }
-#endif
 }
 
 inline Simulation::StepResult metropolis_step(

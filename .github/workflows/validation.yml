@@ -37,7 +37,7 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref || github.ref }}
 
@@ -49,18 +49,25 @@ jobs:
           sudo apt-get update
           sudo apt-get install --yes g++-15 liblapacke-dev libopenblas-dev ninja-build
 
+      - name: Resolve xpu revision
+        id: xpu
+        run: |
+          revision="$(git ls-remote https://github.com/UWHPC/xpu.git refs/heads/main | cut -f1)"
+          echo "Building against xpu ${revision}"
+          echo "revision=${revision}" >> "$GITHUB_OUTPUT"
+
       - name: Cache fetched dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: build-validation-cpu/_deps
-          key: ${{ runner.os }}-cpu-validation-${{ matrix.configuration }}-${{ hashFiles('CMakeLists.txt') }}
+          key: ${{ runner.os }}-cpu-validation-${{ matrix.configuration }}-${{ hashFiles('CMakeLists.txt') }}-xpu-${{ steps.xpu.outputs.revision }}
 
       - name: Build and run scientific validation
         run: ./scripts/validate.sh --cpu ${{ matrix.arguments }}
 
       - name: Upload validation failure log
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: cpu-validation-${{ matrix.configuration }}-failure-log
           path: build-validation-cpu/Testing/Temporary/LastTest.log

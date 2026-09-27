@@ -7,7 +7,7 @@
 
 namespace execution {
 
-[[nodiscard]] CUDA_CALLABLE
+[[nodiscard]] XPU_CUDA_CALLABLE
 inline std::size_t thread() noexcept {
 #if defined(__CUDA_ARCH__)
   return scast<std::size_t>(threadIdx.x);
@@ -16,7 +16,7 @@ inline std::size_t thread() noexcept {
 #endif
 }
 
-[[nodiscard]] CUDA_CALLABLE
+[[nodiscard]] XPU_CUDA_CALLABLE
 inline std::size_t stride() noexcept {
 #if defined(__CUDA_ARCH__)
   return scast<std::size_t>(blockDim.x);
@@ -25,7 +25,7 @@ inline std::size_t stride() noexcept {
 #endif
 }
 
-CUDA_CALLABLE
+XPU_CUDA_CALLABLE
 inline void sync() noexcept {
 #if defined(__CUDA_ARCH__)
   __syncthreads();

@@ -24,11 +24,11 @@ public:
     , b_{b}
   { }
 
-  [[nodiscard]] CUDA_CALLABLE fp_t box_length() const noexcept { return box_length_; }
-  [[nodiscard]] CUDA_CALLABLE fp_t a() const noexcept { return a_; }
-  [[nodiscard]] CUDA_CALLABLE fp_t b() const noexcept { return b_; }
+  [[nodiscard]] XPU_CUDA_CALLABLE fp_t box_length() const noexcept { return box_length_; }
+  [[nodiscard]] XPU_CUDA_CALLABLE fp_t a() const noexcept { return a_; }
+  [[nodiscard]] XPU_CUDA_CALLABLE fp_t b() const noexcept { return b_; }
 
-  [[nodiscard]] CUDA_CALLABLE
+  [[nodiscard]] XPU_CUDA_CALLABLE
   View view() const noexcept {
     return {
       this->box_length(),
