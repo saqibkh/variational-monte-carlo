@@ -8,6 +8,8 @@ name: GPU Simulator
 # does not replace it.
 
 on:
+  push:
+    branches: [ verify-gpu-sim ]
   workflow_dispatch:
   pull_request:
     branches: [ main ]
