@@ -1,0 +1,82 @@
+name: GPU Simulator
+
+# Optional, non-required check. The hosted runners have no GPU and the CMake
+# workflow has no CUDA compiler, so the CUDA build is never compiled or tested
+# there. This builds it and runs the Catch2 tests on a simulated NVIDIA H100
+# (https://github.com/pantheongpu/pantheonsim). A simulator cannot reproduce
+# hardware-specific behavior or timing, so it complements real-GPU testing and
+# does not replace it.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "CMakeLists.txt"
+      - ".github/workflows/gpu-sim.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: CUDA tests (FP64 on a simulated H100)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      # xpu needs CUDA 13.3 or newer for C++23. library-path is disabled because
+      # the project links the toolkit's cuBLAS and cuSOLVER; vgpu run below
+      # points them at the simulator.
+      - name: Set up the simulated H100 and CUDA toolkit
+        uses: pantheongpu/setup-pantheonsim@68edfd58c091361dd6baf060b63de412e544d858 # v0.1.7
+        with:
+          gpu: nvidia/h100
+          cuda-toolkit: "13.3"
+          library-path: 'false'
+
+      # CMake learned nvcc's -std=c++23 (CMAKE_CUDA_STANDARD 23) in 4.4; the
+      # runner image has 3.31.
+      - name: Install CMake 4.4
+        run: |
+          pipx install cmake==4.4.4
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      # 90-virtual embeds PTX only, which the simulator runs, and the simulator
+      # needs a shared CUDA runtime. xpu needs GCC 14 as the host compiler (the
+      # runner's default is 13).
+      - name: Configure
+        env:
+          CUDAHOSTCXX: /usr/bin/g++-14
+        run: |
+          cmake --version
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TESTING=ON \
+            -DFP_64=ON \
+            -DCMAKE_CXX_COMPILER=/usr/bin/g++-14 \
+            -DCMAKE_CUDA_HOST_COMPILER=/usr/bin/g++-14 \
+            -DCUDAToolkit_ROOT=/usr/local/cuda-13.3 \
+            -DCMAKE_CUDA_ARCHITECTURES=90-virtual \
+            -DCMAKE_CUDA_RUNTIME_LIBRARY=Shared
+
+      - name: Build
+        run: cmake --build build -j3 --target vmc_tests
+
+      # CMake falls back to the CPU build when it finds no working CUDA
+      # compiler, so fail here if the tests did not come out as a CUDA build.
+      - name: Check that the tests use CUDA
+        run: ldd build/vmc_tests | grep 'libcudart\.so'
+
+      - name: Test
+        run: vgpu run --gpu nvidia/h100 ctest --test-dir build --output-on-failure
